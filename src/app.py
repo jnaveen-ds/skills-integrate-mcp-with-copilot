@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
 import os
 from pathlib import Path
+from typing import Optional
 
 app = FastAPI(title="Mergington High School API",
               description="API for viewing and signing up for extracurricular activities")
@@ -74,6 +75,12 @@ activities = {
         "schedule": "Fridays, 4:00 PM - 5:30 PM",
         "max_participants": 12,
         "participants": ["charlotte@mergington.edu", "henry@mergington.edu"]
+    },
+    "GitHub Skills": {
+        "description": "Learn practical coding and collaboration skills with GitHub",
+        "schedule": "Saturdays, 10:00 AM - 12:00 PM",
+        "max_participants": 25,
+        "participants": []
     }
 }
 
@@ -84,8 +91,31 @@ def root():
 
 
 @app.get("/activities")
-def get_activities():
-    return activities
+def get_activities(category: Optional[str] = None, sort_by: Optional[str] = None, search: Optional[str] = None):
+    """Retrieve activities with optional filters, sorting, and search."""
+    filtered_activities = activities
+
+    # Filter by category
+    if category:
+        filtered_activities = {
+            name: details for name, details in filtered_activities.items()
+            if category.lower() in details.get("description", "").lower()
+        }
+
+    # Search by text
+    if search:
+        filtered_activities = {
+            name: details for name, details in filtered_activities.items()
+            if search.lower() in name.lower() or search.lower() in details.get("description", "").lower()
+        }
+
+    # Sort activities
+    if sort_by == "name":
+        filtered_activities = dict(sorted(filtered_activities.items(), key=lambda x: x[0].lower()))
+    elif sort_by == "time":
+        filtered_activities = dict(sorted(filtered_activities.items(), key=lambda x: x[1].get("schedule", "")))
+
+    return filtered_activities
 
 
 @app.post("/activities/{activity_name}/signup")
